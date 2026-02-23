@@ -52,12 +52,16 @@ dependencies {
     implementation(libs.androidx.compose.material3)
 
 
-    // Firebase BOM
-    implementation(platform("com.google.firebase:firebase-bom:34.8.0"))
-    implementation("com.google.firebase:firebase-database-ktx")
-    implementation(libs.firebase.database.ktx)
+    // Dependencias para material design
+    implementation("androidx.compose.material:material-icons-extended")
 
+    // Dependencias para navegar entre pantallas
+    implementation("androidx.navigation:navigation-compose:2.8.7")
 
+    // Dependecias para consumo de API con Retrofit
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.9.3")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
