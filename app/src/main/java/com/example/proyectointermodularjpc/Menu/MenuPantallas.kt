@@ -2,7 +2,6 @@ package com.example.proyectointermodularjpc.Menu
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Inventory2
@@ -33,7 +32,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.example.proyectointermodularjpc.ConsumoApiSpringboot.model.Cliente
 import com.example.proyectointermodularjpc.Paginas.PrincipalCalendario
 import com.example.proyectointermodularjpc.Paginas.Productos.Inventario
 import com.example.proyectointermodularjpc.Paginas.Clientes.ListarClientes
@@ -201,22 +199,20 @@ fun AppConMenuHamburguesa(
                         },
                     )
                 }
-                composable(Rutas.CLIENTES) {
-                    // Lista de clientes con datos de ejemplo (temporal). Sustituir por datos reales de la API/DB.
+                composable(Rutas.CLIENTES) { backStackEntry ->
                     ListarClientes(
-                        clientes = listOf(
-                            Cliente(id = 1, nombre = "Juan Pérez", telefono = "600123123", direccion = "C/ Mayor 1", correoElectronico = "juan@example.com"),
-                            Cliente(id = 2, nombre = "María López", telefono = "611222333", direccion = null, correoElectronico = "maria@example.com"),
-                            Cliente(id = 3, nombre = "Taller García", telefono = "955000111", direccion = "Pol. Industrial", correoElectronico = "taller@example.com"),
-                        ),
                         alPulsarAnadirCliente = {
                             navController.navigate(Rutas.NUEVOCLIENTE)
                         },
+                        backStackEntry = backStackEntry,
                     )
                 }
                 composable(Rutas.NUEVOCLIENTE) {
                     FormularioNuevoCliente(
                         alGuardar = {
+                            navController.previousBackStackEntry
+                                ?.savedStateHandle
+                                ?.set("refrescar_clientes", true)
                             navController.popBackStack()
                         },
                         alCancelar = {
@@ -230,8 +226,10 @@ fun AppConMenuHamburguesa(
                 }
                 composable(Rutas.NUEVOPRODUCTO) {
                     NuevoProducto(
-                        alGuardar = {
-                            // TODO: guardar en API/DB y refrescar lista.
+                        alGuardado = {
+                            navController.previousBackStackEntry
+                                ?.savedStateHandle
+                                ?.set("refrescar_productos", true)
                             navController.popBackStack()
                         },
                         alCancelar = {

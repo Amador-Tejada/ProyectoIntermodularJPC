@@ -45,8 +45,14 @@ fun FormularioNuevoCliente(
     var direccion by remember { mutableStateOf("") }
 
     val nombreValido = remember(nombre) { nombre.trim().isNotEmpty() }
-    val telefonoValido = remember(telefono) { telefono.trim().isNotEmpty() }
-    val correoValido = remember(correoElectronico) { correoElectronico.trim().isNotEmpty() }
+    val telefonoValido = remember(telefono) {
+        // Formato típico español: 9 dígitos.
+        telefono.trim().matches(Regex("^[0-9]{9}$"))
+    }
+    val correoValido = remember(correoElectronico) {
+        // Validación ligera (evita vacíos y casos sin @ o sin dominio).
+        correoElectronico.trim().matches(Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"))
+    }
 
     var guardando by remember { mutableStateOf(false) }
     var errorGuardar by remember { mutableStateOf<String?>(null) }
@@ -125,7 +131,7 @@ fun FormularioNuevoCliente(
             label = { Text("Correo electrónico *") },
             placeholder = { Text("ejemplo@correo.com") },
             supportingText = {
-                if (!correoValido) Text("El correo electrónico es obligatorio")
+                if (!correoValido) Text("Introduce un correo válido (ej: ejemplo@correo.com)")
             },
             isError = !correoValido,
             enabled = !guardando,
@@ -139,7 +145,7 @@ fun FormularioNuevoCliente(
             label = { Text("Teléfono *") },
             placeholder = { Text("600123123") },
             supportingText = {
-                if (!telefonoValido) Text("El teléfono es obligatorio")
+                if (!telefonoValido) Text("Introduce un teléfono válido (9 dígitos)")
             },
             isError = !telefonoValido,
             enabled = !guardando,

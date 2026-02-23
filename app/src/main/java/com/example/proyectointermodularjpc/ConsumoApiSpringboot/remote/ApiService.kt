@@ -5,6 +5,7 @@ import com.example.proyectointermodularjpc.ConsumoApiSpringboot.model.Inventario
 import com.example.proyectointermodularjpc.ConsumoApiSpringboot.model.Producto
 import com.example.proyectointermodularjpc.ConsumoApiSpringboot.model.Trabajador
 import com.example.proyectointermodularjpc.ConsumoApiSpringboot.model.Trabajo
+import com.example.proyectointermodularjpc.ConsumoApiSpringboot.model.CrearTrabajoRequest
 import retrofit2.Call
 import retrofit2.http.*
 
@@ -73,7 +74,7 @@ interface ApiService {
     fun getTrabajo(@Path("id") id: Long): Call<Trabajo>
 
     @POST("api/trabajos")
-    fun crearTrabajo(@Body trabajo: Trabajo): Call<Trabajo>
+    fun crearTrabajo(@Body trabajo: CrearTrabajoRequest): Call<Trabajo>
 
     @PUT("api/trabajos/{id}")
     fun actualizarTrabajo(

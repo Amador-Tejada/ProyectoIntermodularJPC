@@ -17,15 +17,22 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.proyectointermodularjpc.ConsumoApiSpringboot.model.Cliente
+import com.example.proyectointermodularjpc.ConsumoApiSpringboot.remote.RetrofitClient
+import com.example.proyectointermodularjpc.ConsumoApiSpringboot.remote.RetrofitUtils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /* En la pantalla tenemos una barra de busqueda para buscar un cliente, un boton para añadir un cliente nuevo
  * y una lista de clientes que mostrara todos los clientes. Si la barra de busqueda tiene parametros la lista
@@ -35,18 +42,51 @@ import com.example.proyectointermodularjpc.ConsumoApiSpringboot.model.Cliente
 /**
  * Pantalla para listar clientes.
  *
- * Contrato:
- * - [clientes] es la lista completa.
- * - Filtra por nombre/email/teléfono con cada cambio en la barra de búsqueda.
- * - [alPulsarAnadirCliente] permite conectar esta pantalla con un formulario o navegación.
+ * Carga la lista desde la API y filtra localmente según la búsqueda.
  */
 @Composable
 fun ListarClientes(
     modifier: Modifier = Modifier,
-    clientes: List<Cliente> = emptyList(),
     alPulsarAnadirCliente: () -> Unit = {},
+    backStackEntry: androidx.navigation.NavBackStackEntry? = null // Agregado para recibir el backStackEntry
 ) {
     var textoBusqueda by remember { mutableStateOf("") }
+
+    var cargando by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var clientes by remember { mutableStateOf<List<Cliente>>(emptyList()) }
+
+    suspend fun cargarClientes() {
+        cargando = true
+        error = null
+        try {
+            val lista = withContext(Dispatchers.IO) {
+                val response = RetrofitClient.apiService.getClientes().execute()
+                if (!response.isSuccessful) throw IllegalStateException(RetrofitUtils.errorMessage(response))
+                response.body().orEmpty()
+            }
+            clientes = lista
+        } catch (t: Throwable) {
+            error = t.message ?: "${t::class.java.simpleName}: ${t.localizedMessage ?: "Error al cargar clientes"}"
+            clientes = emptyList()
+        } finally {
+            cargando = false
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        cargarClientes()
+    }
+
+    // Si venimos de crear un cliente, refrescamos automáticamente.
+    // El flag lo pone MenuPantallas en SavedStateHandle.
+    val refrescar = backStackEntry?.savedStateHandle?.get<Boolean>("refrescar_clientes") == true
+    LaunchedEffect(refrescar) {
+        if (refrescar) {
+            cargarClientes()
+            backStackEntry?.savedStateHandle?.set("refrescar_clientes", false)
+        }
+    }
 
     val clientesFiltrados = remember(clientes, textoBusqueda) {
         val consulta = textoBusqueda.trim()
@@ -58,6 +98,8 @@ fun ListarClientes(
                 (cliente.direccion?.contains(consulta, ignoreCase = true) == true)
         }
     }
+
+    val scope = rememberCoroutineScope()
 
     Column(
         modifier = modifier.padding(16.dp),
@@ -74,7 +116,8 @@ fun ListarClientes(
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             label = { Text("Buscar cliente") },
-            placeholder = { Text("Nombre, email o teléfono") },
+            placeholder = { Text("Nombre, correo o teléfono") },
+            enabled = !cargando,
         )
 
         Row(
@@ -83,32 +126,55 @@ fun ListarClientes(
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(
-                text = "Resultados: ${clientesFiltrados.size}",
+                text = if (cargando) "Cargando…" else "Resultados: ${clientesFiltrados.size}",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
-            Button(onClick = alPulsarAnadirCliente) {
-                Text("Añadir cliente")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+
+                Button(onClick = alPulsarAnadirCliente, enabled = !cargando) {
+                    Text("Añadir")
+                }
             }
         }
 
-        if (clientesFiltrados.isEmpty()) {
+        if (error != null) {
             Text(
-                text = "No hay clientes que coincidan con la búsqueda.",
+                text = error ?: "",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.error,
             )
-        } else {
-            LazyColumn(
-                contentPadding = PaddingValues(bottom = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                items(
-                    items = clientesFiltrados,
-                    key = { it.id ?: it.correoElectronico },
-                ) { cliente ->
-                    FilaCliente(cliente = cliente)
+        }
+
+        when {
+            cargando -> {
+                Text(
+                    text = "Cargando clientes…",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            clientesFiltrados.isEmpty() -> {
+                Text(
+                    text = "No hay clientes que coincidan con la búsqueda.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            else -> {
+                LazyColumn(
+                    contentPadding = PaddingValues(bottom = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    items(
+                        items = clientesFiltrados,
+                        key = { it.id ?: it.correoElectronico },
+                    ) { cliente ->
+                        FilaCliente(cliente = cliente)
+                    }
                 }
             }
         }

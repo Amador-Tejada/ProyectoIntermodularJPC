@@ -1,5 +1,6 @@
 package com.example.proyectointermodularjpc.Paginas.Trabajos
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -7,12 +8,19 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -24,24 +32,24 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.proyectointermodularjpc.ConsumoApiSpringboot.model.Cliente
+import com.example.proyectointermodularjpc.ConsumoApiSpringboot.model.CrearTrabajoRequest
 import com.example.proyectointermodularjpc.ConsumoApiSpringboot.model.EstadoTrabajo
 import com.example.proyectointermodularjpc.ConsumoApiSpringboot.model.PrioridadTrabajo
-import com.example.proyectointermodularjpc.ConsumoApiSpringboot.model.Trabajador
-import com.example.proyectointermodularjpc.ConsumoApiSpringboot.model.Trabajo
 import com.example.proyectointermodularjpc.ConsumoApiSpringboot.remote.RetrofitClient
 import com.example.proyectointermodularjpc.ConsumoApiSpringboot.remote.RetrofitUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
-/* Aqui tenemos un formulario para añadir un nuevo trabajo, un boton para guardar el trabajo
- * en la base de datos mediante la Api y otro para cancelar.
- * Ambos nos devolvera a la pantalla de ListaTareas.
- */
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
- * Formulario para crear un nuevo [Trabajo] mediante la API.
+ * Formulario para crear un nuevo trabajo.
+ * - Botón "Cancelar" → vuelve a ListaTareas.
+ * - Botón "Añadir tarea" → guarda en la BD mediante la API y vuelve a ListaTareas.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NuevasTareas(
     modifier: Modifier = Modifier,
@@ -56,9 +64,7 @@ fun NuevasTareas(
     var prioridad by remember { mutableStateOf(PrioridadTrabajo.MEDIA) }
 
     var clientes by remember { mutableStateOf<List<Cliente>>(emptyList()) }
-    var trabajadores by remember { mutableStateOf<List<Trabajador>>(emptyList()) }
     var clienteSeleccionado by remember { mutableStateOf<Cliente?>(null) }
-    var trabajadorSeleccionado by remember { mutableStateOf<Trabajador?>(null) }
 
     var cargandoDatos by remember { mutableStateOf(false) }
     var guardando by remember { mutableStateOf(false) }
@@ -69,52 +75,45 @@ fun NuevasTareas(
     val tituloValido = remember(titulo) { titulo.trim().isNotEmpty() }
     val fechaValida = remember(fechaProgramada) { fechaProgramada.trim().isNotEmpty() }
 
-    // Cargamos clientes y trabajadores para poder asociarlos al trabajo.
+    // Carga inicial de clientes (el backend exige cliente NOT NULL).
     LaunchedEffect(Unit) {
         cargandoDatos = true
         error = null
         try {
-            val (listaClientes, listaTrabajadores) = withContext(Dispatchers.IO) {
-                val respClientes = RetrofitClient.apiService.getClientes().execute()
-                if (!respClientes.isSuccessful) throw IllegalStateException(RetrofitUtils.errorMessage(respClientes))
-
-                val respTrabajadores = RetrofitClient.apiService.getTrabajadores().execute()
-                if (!respTrabajadores.isSuccessful) throw IllegalStateException(RetrofitUtils.errorMessage(respTrabajadores))
-
-                respClientes.body().orEmpty() to respTrabajadores.body().orEmpty()
+            val lista = withContext(Dispatchers.IO) {
+                val resp = RetrofitClient.apiService.getClientes().execute()
+                if (!resp.isSuccessful) throw IllegalStateException(RetrofitUtils.errorMessage(resp))
+                resp.body().orEmpty()
             }
-
-            clientes = listaClientes
-            trabajadores = listaTrabajadores
-            if (clienteSeleccionado == null) clienteSeleccionado = listaClientes.firstOrNull()
-            if (trabajadorSeleccionado == null) trabajadorSeleccionado = listaTrabajadores.firstOrNull()
+            clientes = lista
+            if (clienteSeleccionado == null) clienteSeleccionado = lista.firstOrNull()
         } catch (t: Throwable) {
-            error = t.message ?: "Error al cargar datos"
+            error = t.message ?: "Error al cargar clientes"
         } finally {
             cargandoDatos = false
         }
     }
 
+    // ── Guardar trabajo ──────────────────────────────────────────────
     fun guardarTrabajo() {
         if (guardando) return
         error = null
 
         val cliente = clienteSeleccionado
-        val trabajador = trabajadorSeleccionado
-        if (!tituloValido || !fechaValida || cliente == null || trabajador == null) {
+        if (!tituloValido || !fechaValida || cliente?.id == null) {
             error = "Revisa los campos obligatorios"
             return
         }
 
-        val trabajo = Trabajo(
-            id = null,
+        // El backend recibe un TrabajoDTO con clienteId (Long, @NotNull), NO un objeto cliente.
+        // Los enums se serializan como PENDIENTE, MEDIA… (name()) porque el backend usa @Enumerated(EnumType.STRING).
+        val trabajo = CrearTrabajoRequest(
             titulo = titulo.trim(),
             descripcion = descripcion.trim().ifBlank { null },
             fechaProgramada = fechaProgramada.trim(),
             estado = estado,
             prioridad = prioridad,
-            cliente = cliente,
-            trabajador = trabajador,
+            clienteId = cliente.id,
         )
 
         guardando = true
@@ -122,7 +121,8 @@ fun NuevasTareas(
             try {
                 withContext(Dispatchers.IO) {
                     val response = RetrofitClient.apiService.crearTrabajo(trabajo).execute()
-                    if (!response.isSuccessful) throw IllegalStateException(RetrofitUtils.errorMessage(response))
+                    if (!response.isSuccessful)
+                        throw IllegalStateException(RetrofitUtils.errorMessage(response))
                 }
                 alGuardar()
             } catch (t: Throwable) {
@@ -133,6 +133,19 @@ fun NuevasTareas(
         }
     }
 
+    // ── Estado de diálogos ───────────────────────────────────────────
+    var mostrarSelectorCliente by remember { mutableStateOf(false) }
+    var filtroCliente by remember { mutableStateOf("") }
+    val clientesFiltrados = remember(clientes, filtroCliente) {
+        val q = filtroCliente.trim()
+        if (q.isEmpty()) clientes else clientes.filter { it.nombre.contains(q, ignoreCase = true) }
+    }
+
+    var mostrarSelectorFecha by remember { mutableStateOf(false) }
+    val estadoDatePicker = rememberDatePickerState()
+    val formateadorFecha = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
+
+    // ── UI ───────────────────────────────────────────────────────────
     Column(
         modifier = modifier.padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -140,13 +153,10 @@ fun NuevasTareas(
         Text(text = "Nueva tarea", style = MaterialTheme.typography.titleLarge)
 
         if (error != null) {
-            Text(
-                text = error ?: "",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.error,
-            )
+            Text(text = error ?: "", color = MaterialTheme.colorScheme.error)
         }
 
+        // Título
         OutlinedTextField(
             value = titulo,
             onValueChange = { titulo = it },
@@ -154,10 +164,11 @@ fun NuevasTareas(
             singleLine = true,
             label = { Text("Título *") },
             enabled = !guardando,
-            supportingText = { if (!tituloValido) Text("El título es obligatorio") },
             isError = !tituloValido,
+            supportingText = { if (!tituloValido) Text("El título es obligatorio") },
         )
 
+        // Descripción
         OutlinedTextField(
             value = descripcion,
             onValueChange = { descripcion = it },
@@ -167,82 +178,61 @@ fun NuevasTareas(
             minLines = 2,
         )
 
-        OutlinedTextField(
-            value = fechaProgramada,
-            onValueChange = { fechaProgramada = it },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            label = { Text("Fecha programada *") },
-            placeholder = { Text("yyyy-MM-dd") },
+        // Fecha
+        OutlinedButton(
+            onClick = { mostrarSelectorFecha = true },
             enabled = !guardando,
-            supportingText = { if (!fechaValida) Text("La fecha es obligatoria") },
-            isError = !fechaValida,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(if (fechaProgramada.isBlank()) "Selecciona una fecha *" else "Fecha: $fechaProgramada")
+        }
+        if (!fechaValida) {
+            Text("La fecha es obligatoria", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+        }
+
+        // Estado y Prioridad
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            OutlinedButton(
+                onClick = {
+                    val v = EstadoTrabajo.entries
+                    estado = v[(v.indexOf(estado) + 1) % v.size]
+                },
+                enabled = !guardando,
+            ) { Text("Estado: ${estado.name}") }
+
+            OutlinedButton(
+                onClick = {
+                    val v = PrioridadTrabajo.entries
+                    prioridad = v[(v.indexOf(prioridad) + 1) % v.size]
+                },
+                enabled = !guardando,
+            ) { Text("Prioridad: ${prioridad.name}") }
+        }
+
+        // Cliente
+        OutlinedTextField(
+            value = clienteSeleccionado?.nombre ?: "",
+            onValueChange = { },
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(enabled = !guardando && !cargandoDatos && clientes.isNotEmpty()) {
+                    filtroCliente = ""
+                    mostrarSelectorCliente = true
+                },
+            readOnly = true,
+            singleLine = true,
+            label = { Text("Cliente *") },
+            placeholder = { Text("Selecciona un cliente") },
+            enabled = !guardando && !cargandoDatos,
         )
-
-        // Selects simples (ciclo) para Estado/Prioridad.
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            OutlinedButton(
-                onClick = {
-                    val valores = EstadoTrabajo.entries
-                    val idx = valores.indexOf(estado)
-                    estado = valores[(idx + 1) % valores.size]
-                },
-                enabled = !guardando,
-            ) {
-                Text("Estado: ${estado.name}")
-            }
-
-            OutlinedButton(
-                onClick = {
-                    val valores = PrioridadTrabajo.entries
-                    val idx = valores.indexOf(prioridad)
-                    prioridad = valores[(idx + 1) % valores.size]
-                },
-                enabled = !guardando,
-            ) {
-                Text("Prioridad: ${prioridad.name}")
-            }
-        }
-
-        // Cliente / trabajador (selector simple por ciclo) evitando añadir dependencias extra.
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            OutlinedButton(
-                onClick = {
-                    if (clientes.isEmpty()) return@OutlinedButton
-                    val actual = clienteSeleccionado
-                    val idx = clientes.indexOfFirst { it.id == actual?.id }
-                    val siguiente = if (idx == -1) clientes.first() else clientes[(idx + 1) % clientes.size]
-                    clienteSeleccionado = siguiente
-                },
-                enabled = !guardando && !cargandoDatos && clientes.isNotEmpty(),
-            ) {
-                Text("Cliente: ${clienteSeleccionado?.nombre ?: "(sin)"}")
-            }
-
-            OutlinedButton(
-                onClick = {
-                    if (trabajadores.isEmpty()) return@OutlinedButton
-                    val actual = trabajadorSeleccionado
-                    val idx = trabajadores.indexOfFirst { it.id == actual?.id }
-                    val siguiente = if (idx == -1) trabajadores.first() else trabajadores[(idx + 1) % trabajadores.size]
-                    trabajadorSeleccionado = siguiente
-                },
-                enabled = !guardando && !cargandoDatos && trabajadores.isNotEmpty(),
-            ) {
-                Text("Trabajador: ${trabajadorSeleccionado?.nombre ?: "(sin)"}")
-            }
-        }
 
         Spacer(modifier = Modifier.height(8.dp))
 
+        // Botones: Cancelar / Añadir tarea
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End),
@@ -253,18 +243,68 @@ fun NuevasTareas(
             }
             Button(
                 onClick = { guardarTrabajo() },
-                enabled = !guardando && !cargandoDatos && tituloValido && fechaValida && clienteSeleccionado != null && trabajadorSeleccionado != null,
+                enabled = !guardando && !cargandoDatos && tituloValido && fechaValida && clienteSeleccionado?.id != null,
             ) {
-                Text(if (guardando) "Guardando…" else "Guardar")
+                Text(if (guardando) "Guardando…" else "Añadir tarea")
             }
         }
+    }
 
-        if (cargandoDatos) {
-            Text(
-                text = "Cargando clientes y trabajadores…",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+    // ── Diálogo: selector de cliente ─────────────────────────────────
+    if (mostrarSelectorCliente) {
+        AlertDialog(
+            onDismissRequest = { mostrarSelectorCliente = false },
+            title = { Text("Seleccionar cliente") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = filtroCliente,
+                        onValueChange = { filtroCliente = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        label = { Text("Buscar por nombre") },
+                    )
+                    if (clientesFiltrados.isEmpty()) {
+                        Text("No hay clientes que coincidan.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    } else {
+                        LazyColumn {
+                            items(clientesFiltrados, key = { it.id ?: it.correoElectronico }) { c ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            clienteSeleccionado = c
+                                            mostrarSelectorCliente = false
+                                        }
+                                        .padding(vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) { Text(c.nombre, style = MaterialTheme.typography.bodyLarge) }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { mostrarSelectorCliente = false }) { Text("Cerrar") }
+            },
+        )
+    }
+
+    // ── Diálogo: selector de fecha ───────────────────────────────────
+    if (mostrarSelectorFecha) {
+        DatePickerDialog(
+            onDismissRequest = { mostrarSelectorFecha = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    estadoDatePicker.selectedDateMillis?.let {
+                        fechaProgramada = formateadorFecha.format(Date(it))
+                    }
+                    mostrarSelectorFecha = false
+                }) { Text("Aceptar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { mostrarSelectorFecha = false }) { Text("Cancelar") }
+            },
+        ) { DatePicker(state = estadoDatePicker) }
     }
 }

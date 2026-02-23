@@ -108,7 +108,7 @@ fun DetallesTareas(
                         Text(text = "Estado: ${t.estado}", style = MaterialTheme.typography.bodyMedium)
                         Text(text = "Prioridad: ${t.prioridad}", style = MaterialTheme.typography.bodyMedium)
                         Text(text = "Cliente: ${t.cliente.nombre}", style = MaterialTheme.typography.bodyMedium)
-                        Text(text = "Trabajador: ${t.trabajador.nombre}", style = MaterialTheme.typography.bodyMedium)
+                        Text(text = "Trabajador: ${t.trabajador?.nombre}", style = MaterialTheme.typography.bodyMedium)
                     }
                 }
 
