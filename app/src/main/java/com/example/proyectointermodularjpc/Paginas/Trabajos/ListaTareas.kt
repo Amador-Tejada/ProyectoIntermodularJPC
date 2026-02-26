@@ -89,8 +89,6 @@ fun ListaTareas(
         modifier = modifier.padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text(text = "Tareas", style = MaterialTheme.typography.titleLarge)
-
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End),

@@ -189,7 +189,8 @@ private fun FilaCliente(cliente: Cliente) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
+        Column(modifier = Modifier.padding(12.dp)
+            .fillMaxWidth()) {
             Text(
                 text = cliente.nombre.ifBlank { "(Sin nombre)" },
                 style = MaterialTheme.typography.titleMedium,

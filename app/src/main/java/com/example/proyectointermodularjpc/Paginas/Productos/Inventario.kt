@@ -108,10 +108,6 @@ fun Inventario(
         modifier = modifier.padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text(
-            text = "Inventario",
-            style = MaterialTheme.typography.titleLarge,
-        )
 
         OutlinedTextField(
             value = textoBusqueda,

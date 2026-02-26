@@ -13,21 +13,10 @@ object RetrofitClient {
     /**
      * URL base del servidor donde está desplegada la API REST
      *
-     * IMPORTANTE PARA LOS ALUMNOS:
-     * - Si usáis el emulador de Android Studio: http://10.0.2.2:8080/
-     *   (10.0.2.2 es una IP especial que el emulador entiende como "localhost de mi PC")
-     *
-     * - Si usáis un móvil físico conectado a la misma WiFi: http://TU_IP_LOCAL:8080/
-     *   (podéis ver vuestra IP en Windows con "ipconfig" o en Mac con "ifconfig")
-     *
-     * - Si habéis desplegado el servidor en la nube: https://tu-servidor.com/
+     * - Si se usa el emulador de Android Studio: puerto 8081
      */
     private const val BASE_URL = "http://10.0.2.2:8081/"
 
-    /**
-     * Variable que almacena el token JWT actual
-     * Se actualiza después del login o registro
-     */
     private var currentToken: String? = null
 
     /**
