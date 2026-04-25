@@ -64,6 +64,7 @@ fun TareasCliente(
         Text(
             text = "Tareas del cliente",
             style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.primary
         )
 
         when {

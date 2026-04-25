@@ -94,6 +94,7 @@ fun NuevoProducto(
         Text(
             text = "Nuevo producto",
             style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.primary
         )
 
         if (error != null) {

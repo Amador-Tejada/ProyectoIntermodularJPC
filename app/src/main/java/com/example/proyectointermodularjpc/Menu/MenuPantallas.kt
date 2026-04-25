@@ -1,5 +1,8 @@
 package com.example.proyectointermodularjpc.Menu
 
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
@@ -10,6 +13,7 @@ import androidx.compose.material.icons.filled.Task
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -80,6 +84,16 @@ fun AppConMenuHamburguesa() {
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Gestoriers",
+                    modifier = Modifier.padding(horizontal = 28.dp, vertical = 16.dp),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 28.dp, vertical = 8.dp))
+                Spacer(modifier = Modifier.height(12.dp))
+
                 pantallasMenu.forEach { pantalla ->
                     // Comprobamos si la ruta actual pertenece a la sección de esta pantalla del menú
                     val esRutaDeSeccion = when (pantalla.ruta) {
@@ -90,7 +104,7 @@ fun AppConMenuHamburguesa() {
                     }
 
                     NavigationDrawerItem(
-                        label = { Text(pantalla.titulo) },
+                        label = { Text(pantalla.titulo, style = MaterialTheme.typography.labelLarge) },
                         selected = rutaActual == pantalla.ruta || esRutaDeSeccion,
                         onClick = {
                             scope.launch { drawerState.close() }
@@ -106,8 +120,10 @@ fun AppConMenuHamburguesa() {
                                 restoreState = !yaEnSeccion && !esCalendario
                             }
                         },
-                        icon = pantalla.icono
+                        icon = pantalla.icono,
+                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                     )
+                    Spacer(modifier = Modifier.height(4.dp))
                 }
             }
         }
@@ -117,7 +133,11 @@ fun AppConMenuHamburguesa() {
                 TopAppBar(
                     title = {
                         val pantalla = pantallasMenu.find { it.ruta == rutaActual }
-                        Text(pantalla?.titulo ?: "Detalle")
+                        Text(
+                            text = pantalla?.titulo ?: "Detalle",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.primary
+                        )
                     },
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {

@@ -99,7 +99,11 @@ fun EditarCliente(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(text = "Editar Cliente", style = MaterialTheme.typography.headlineMedium)
+            Text(
+                text = "Editar Cliente",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
 
             if (error != null) {
                 Text(text = error!!, color = MaterialTheme.colorScheme.error)

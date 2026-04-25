@@ -93,7 +93,11 @@ fun NuevasTareas(
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text("Nueva Tarea", style = MaterialTheme.typography.headlineMedium)
+        Text(
+            text = "Nueva Tarea",
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.primary
+        )
 
         if (error != null) {
             Text(error!!, color = MaterialTheme.colorScheme.error)

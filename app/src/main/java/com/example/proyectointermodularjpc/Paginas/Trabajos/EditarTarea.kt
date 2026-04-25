@@ -127,7 +127,11 @@ fun EditarTarea(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text("Editar Tarea", style = MaterialTheme.typography.headlineMedium)
+            Text(
+                text = "Editar Tarea",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
 
             if (error != null) {
                 Text(error!!, color = MaterialTheme.colorScheme.error)

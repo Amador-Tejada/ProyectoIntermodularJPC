@@ -99,6 +99,7 @@ fun FormularioNuevoCliente(
         Text(
             text = "Nuevo cliente",
             style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.primary
         )
 
         if (errorGuardar != null) {

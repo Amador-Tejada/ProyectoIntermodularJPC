@@ -59,7 +59,11 @@ fun DetallesTareas(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(text = t.titulo, style = MaterialTheme.typography.headlineMedium)
+            Text(
+                text = t.titulo,
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
             HorizontalDivider()
             
             ItemDetalle("Descripción", t.descripcion ?: "Sin descripción")
