@@ -3,6 +3,8 @@ package com.example.proyectointermodularjpc.Paginas.Trabajos
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.runtime.*
@@ -14,7 +16,10 @@ import com.example.proyectointermodularjpc.ConsumoApiSpringboot.remote.RetrofitU
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
 import java.time.LocalDate
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,6 +42,9 @@ fun NuevasTareas(
     
     var cargando by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+
+    var mostrarDatePicker by remember { mutableStateOf(false) }
+    val datePickerState = rememberDatePickerState()
 
     LaunchedEffect(Unit) {
         try {
@@ -117,12 +125,43 @@ fun NuevasTareas(
             modifier = Modifier.fillMaxWidth()
         )
 
+        // Selector de Fecha con Calendario
         OutlinedTextField(
             value = fechaProgramada,
-            onValueChange = { fechaProgramada = it },
-            label = { Text("Fecha (yyyy-MM-dd)") },
+            onValueChange = { },
+            readOnly = true,
+            label = { Text("Fecha Programada") },
+            trailingIcon = {
+                IconButton(onClick = { mostrarDatePicker = true }) {
+                    Icon(Icons.Default.DateRange, contentDescription = "Seleccionar fecha")
+                }
+            },
             modifier = Modifier.fillMaxWidth()
         )
+
+        if (mostrarDatePicker) {
+            DatePickerDialog(
+                onDismissRequest = { mostrarDatePicker = false },
+                confirmButton = {
+                    TextButton(onClick = {
+                        datePickerState.selectedDateMillis?.let { millis ->
+                            val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                            fechaProgramada = formatter.format(Date(millis))
+                        }
+                        mostrarDatePicker = false
+                    }) {
+                        Text("Aceptar")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { mostrarDatePicker = false }) {
+                        Text("Cancelar")
+                    }
+                }
+            ) {
+                DatePicker(state = datePickerState)
+            }
+        }
 
         // Selectores de Enum
         SelectorEnum("Estado", estado, EstadoTrabajo.entries) { estado = it }
