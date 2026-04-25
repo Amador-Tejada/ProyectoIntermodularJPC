@@ -1,5 +1,6 @@
 package com.example.proyectointermodularjpc.Paginas.Clientes
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -10,12 +11,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -48,7 +46,9 @@ import kotlinx.coroutines.withContext
 fun ListarClientes(
     modifier: Modifier = Modifier,
     alPulsarAnadirCliente: () -> Unit = {},
-    backStackEntry: androidx.navigation.NavBackStackEntry? = null // Agregado para recibir el backStackEntry
+    backStackEntry: androidx.navigation.NavBackStackEntry? = null, // Agregado para recibir el backStackEntry
+    alPulsarCliente: (Long) -> Unit = {}, // Nuevo parámetro para abrir tareas del cliente
+    alPulsarEditarCliente: (Long) -> Unit = {}
 ) {
     var textoBusqueda by remember { mutableStateOf("") }
 
@@ -105,11 +105,7 @@ fun ListarClientes(
         modifier = modifier.padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text(
-            text = "Clientes",
-            style = MaterialTheme.typography.titleLarge,
-        )
-
+        
         OutlinedTextField(
             value = textoBusqueda,
             onValueChange = { textoBusqueda = it },
@@ -173,7 +169,11 @@ fun ListarClientes(
                         items = clientesFiltrados,
                         key = { it.id ?: it.correoElectronico },
                     ) { cliente ->
-                        FilaCliente(cliente = cliente)
+                        FilaCliente(
+                            cliente = cliente,
+                            alPulsar = { cliente.id?.let(alPulsarCliente) },
+                            alEditar = { cliente.id?.let(alPulsarEditarCliente) }
+                        )
                     }
                 }
             }
@@ -185,50 +185,68 @@ fun ListarClientes(
  * Fila visual de un cliente.
  */
 @Composable
-private fun FilaCliente(cliente: Cliente) {
+private fun FilaCliente(cliente: Cliente, alPulsar: () -> Unit = {}, alEditar: () -> Unit = {}) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp)
+            .let { if (cliente.id != null) it.clickable { alPulsar() } else it }
     ) {
-        Column(modifier = Modifier.padding(12.dp)
-            .fillMaxWidth()) {
-            Text(
-                text = cliente.nombre.ifBlank { "(Sin nombre)" },
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-
-            if (cliente.correoElectronico.isNotBlank()) {
-                Spacer(modifier = Modifier.height(2.dp))
+        Row(
+            modifier = Modifier
+                .padding(12.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = cliente.correoElectronico,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = cliente.nombre.ifBlank { "(Sin nombre)" },
+                    style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+
+                if (cliente.correoElectronico.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = cliente.correoElectronico,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+
+                if (cliente.telefono.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = cliente.telefono,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+
+                val direccion = cliente.direccion
+                if (!direccion.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = direccion,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
 
-            if (cliente.telefono.isNotBlank()) {
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = cliente.telefono,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-
-            val direccion = cliente.direccion
-            if (!direccion.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = direccion,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+            IconButton(onClick = alEditar) {
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = "Editar cliente",
+                    tint = MaterialTheme.colorScheme.primary
                 )
             }
         }

@@ -20,6 +20,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,6 +31,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.proyectointermodularjpc.ConsumoApiSpringboot.model.Trabajo
+import com.example.proyectointermodularjpc.ConsumoApiSpringboot.remote.RetrofitClient
+import com.example.proyectointermodularjpc.ConsumoApiSpringboot.remote.RetrofitUtils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
@@ -65,13 +70,35 @@ private fun Trabajo.aUi(): TrabajoUI = TrabajoUI(
 fun PrincipalCalendario(
     modifier: Modifier = Modifier,
     zoneId: ZoneId = ZoneId.systemDefault(),
-    trabajos: List<Trabajo> = emptyList(),
+    alPulsarTarea: (Long) -> Unit = {},
 ) {
+    var cargando by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var trabajosApi by remember { mutableStateOf<List<Trabajo>>(emptyList()) }
+
+    // Carga de datos desde la API
+    LaunchedEffect(Unit) {
+        cargando = true
+        error = null
+        try {
+            val lista = withContext(Dispatchers.IO) {
+                val response = RetrofitClient.apiService.getTrabajos().execute()
+                if (!response.isSuccessful) throw IllegalStateException(RetrofitUtils.errorMessage(response))
+                response.body().orEmpty()
+            }
+            trabajosApi = lista
+        } catch (t: Throwable) {
+            error = t.message ?: "Error al cargar tareas"
+        } finally {
+            cargando = false
+        }
+    }
+
     val hoy = remember { LocalDate.now(zoneId) }
     var mesActual by remember { mutableStateOf(YearMonth.from(hoy)) }
     var fechaSeleccionada by remember { mutableStateOf<LocalDate?>(hoy) }
 
-    val trabajosUi = remember(trabajos) { trabajos.map { it.aUi() } }
+    val trabajosUi = remember(trabajosApi) { trabajosApi.map { it.aUi() } }
 
     val diasConTareas = remember(trabajosUi, mesActual, zoneId) {
         trabajosUi
@@ -88,6 +115,15 @@ fun PrincipalCalendario(
     }
 
     Column(modifier = modifier.padding(16.dp)) {
+        if (error != null) {
+            Text(
+                text = error ?: "Error",
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+        }
+
         CabeceraMes(
             mesActual = mesActual,
             alAnterior = { mesActual = mesActual.minusMonths(1) },
@@ -95,6 +131,15 @@ fun PrincipalCalendario(
         )
 
         Spacer(modifier = Modifier.height(8.dp))
+
+        if (cargando) {
+            Text(
+                text = "Cargando tareas...",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+        }
 
         RejillaCalendarioMes(
             yearMonth = mesActual,
@@ -136,7 +181,11 @@ fun PrincipalCalendario(
                     items = trabajosFiltrados,
                     key = { it.id ?: (it.titulo + it.fechaProgramada) },
                 ) { trabajo ->
-                    FilaTrabajo(trabajo = trabajo, zoneId = zoneId)
+                    FilaTrabajo(
+                        trabajo = trabajo, 
+                        zoneId = zoneId,
+                        alPulsar = { trabajo.id?.let(alPulsarTarea) }
+                    )
                 }
             }
         }
@@ -309,13 +358,14 @@ private fun CeldaDia(
 }
 
 @Composable
-private fun FilaTrabajo(trabajo: TrabajoUI, zoneId: ZoneId) {
+private fun FilaTrabajo(trabajo: TrabajoUI, zoneId: ZoneId, alPulsar: () -> Unit) {
     val fecha = remember(trabajo.fechaProgramada, zoneId) {
         trabajo.fechaProgramada.aFechaLocal(zoneId)
     }
 
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = alPulsar)
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {

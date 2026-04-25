@@ -8,5 +8,6 @@ enum class PrioridadTrabajo {
     BAJA,
     MEDIA,
     ALTA,
-    URGENTE
+    URGENTE,
+    CRITICA
 }

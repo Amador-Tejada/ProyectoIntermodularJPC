@@ -1,19 +1,28 @@
 package com.example.proyectointermodularjpc.ConsumoApiSpringboot.model
 
-/**
- * Modelo de Trabajo para el consumo de la API.
- *
- * NOTA: En el backend, fechaProgramada es LocalDate, por lo que se envía/recibe como String con formato yyyy-MM-dd.
- */
+import com.google.gson.annotations.SerializedName
+
 data class Trabajo(
     val id: Long? = null,
     val titulo: String,
     val descripcion: String?,
-    /** yyyy-MM-dd */
+    @SerializedName(value = "fecha_programada", alternate = ["fechaProgramada"])
     val fechaProgramada: String,
     val estado: EstadoTrabajo,
     val prioridad: PrioridadTrabajo,
-    val cliente: Cliente,
-    /** Puede no enviarse al crear el trabajo. */
+    val cliente: Cliente?,
     val trabajador: Trabajador? = null,
+    val productos: List<Producto>? = emptyList()
+)
+
+data class CrearTrabajoRequest(
+    val titulo: String,
+    val descripcion: String?,
+    @SerializedName(value = "fecha_programada", alternate = ["fechaProgramada"])
+    val fechaProgramada: String,
+    val estado: EstadoTrabajo,
+    val prioridad: PrioridadTrabajo,
+    val cliente: Cliente?,
+    val trabajador: Trabajador?,
+    val productos: List<Producto> = emptyList()
 )

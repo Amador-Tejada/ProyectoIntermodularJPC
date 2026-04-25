@@ -67,7 +67,7 @@ fun FormularioNuevoCliente(
             id = null,
             nombre = nombre.trim(),
             telefono = telefono.trim(),
-            direccion = direccion.trim().ifBlank { null },
+            direccion = direccion.trim().ifBlank { "Sin dirección" },
             correoElectronico = correoElectronico.trim(),
         )
 
